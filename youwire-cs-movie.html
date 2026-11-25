@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>デモ：会話を共有する、4つの実践（通し版）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;height:100%;background:#0d1530;overflow:hidden}
+#stage{position:absolute;width:1920px;height:1080px;transform-origin:0 0;overflow:hidden;--sans:"Noto Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;background:#F7F9FC}
+.scene-box{position:absolute;inset:0;overflow:hidden;display:none}
+#ctl{position:fixed;left:0;right:0;bottom:0;height:56px;display:flex;align-items:center;gap:14px;padding:0 18px;background:#0d1530;color:#dfe6f2;font:14px system-ui,sans-serif}
+#btn{width:40px;height:32px;border:0;border-radius:8px;background:#37C2B8;color:#16264F;font-size:14px;cursor:pointer}
+#bar{flex:1;height:8px;background:#2a3a63;border-radius:4px;cursor:pointer;position:relative}#fill{position:absolute;left:0;top:0;bottom:0;background:#37C2B8;border-radius:4px}
+</style>
+<style>
+#stage { --ground:#F7F9FC; --main:#16264F; --second:#1F2A37; --accent:#37C2B8; color:var(--second); font-family:var(--sans, system-ui, sans-serif);
+  --desk:color-mix(in srgb, var(--main) 7%, var(--ground)); --hair:color-mix(in srgb, var(--second) 12%, white); --soft:color-mix(in srgb, var(--second) 4%, white); --mute:color-mix(in srgb, var(--second) 55%, white); --tealdk:color-mix(in srgb, var(--accent) 60%, var(--main)); --tealbg:color-mix(in srgb, var(--accent) 14%, white); --link:color-mix(in srgb, var(--main) 55%, #2a6fdb); --warn:#D9572B; --warnbg:#FDEDE6; --in:#3B5BDB; --inbg:#E6ECFF; --sp2:#C2410C }
+.ground { position:absolute; inset:0; background:var(--ground) }
+.words { position:absolute; margin:0; display:flex; flex-direction:column; gap:20px } .words > * { margin:0 }
+.line { font-size:84px; line-height:1.2; font-weight:700; color:var(--main) } .sub { font-size:36px; color:color-mix(in srgb, var(--second) 75%, var(--ground)) }
+.desk { position:absolute; inset:0; background:radial-gradient(120% 90% at 50% 40%, var(--ground), var(--desk)) }
+.layer { position:absolute; left:0; top:0; width:1920px; height:1080px; transform-origin:0 0 }
+.win { position:absolute; background:white; border-radius:14px; box-shadow:0 30px 80px rgba(22,38,79,.16), 0 2px 6px rgba(22,38,79,.08); overflow:hidden; font-size:15px; color:#1a1a1a }
+.win-bar { height:38px; background:var(--soft); border-bottom:1px solid var(--hair); display:flex; align-items:center; gap:8px; padding:0 16px }
+.win-dot { width:12px; height:12px; border-radius:50%; background:var(--hair) }
+.win-url { margin-left:18px; font-size:13px; color:var(--mute); background:white; border:1px solid var(--hair); border-radius:8px; padding:4px 14px }
+.cap { position:absolute; left:96px; bottom:72px; background:var(--main); color:white; border-radius:999px; padding:18px 36px; font-size:36px; font-weight:700; display:flex; align-items:center; gap:18px; box-shadow:0 12px 30px rgba(22,38,79,.25) }
+.chap { position:absolute; left:96px; top:40px; display:flex; align-items:center; gap:14px; background:white; border-radius:999px; padding:10px 26px 10px 12px; box-shadow:0 8px 24px rgba(22,38,79,.12); font-size:24px; font-weight:700; color:var(--main) }
+.chap-n { background:var(--main); color:var(--accent); border-radius:999px; padding:4px 14px; font-size:20px }
+.bridge { position:absolute; inset:0; display:flex; align-items:center; justify-content:center }
+.yw-head { display:flex; justify-content:space-between; align-items:center; padding:18px 24px; border-bottom:1px solid var(--hair) }
+.yw-h1 { font-size:26px; font-weight:700 } .yw-btn { background:#1a1a1a; color:white; border-radius:8px; padding:10px 18px; font-size:15px; font-weight:700 }
+.yw-player { height:72px; background:var(--soft); border-bottom:1px solid var(--hair); display:flex; align-items:center; gap:18px; padding:0 24px 0 300px; color:var(--mute); font-size:15px }
+.yw-track { flex:1; height:2px; background:var(--hair) } .yw-speed { border:1px solid var(--hair); background:white; border-radius:8px; padding:6px 12px; color:#1a1a1a }
+.yw-search { margin:12px 18px; border:1px solid var(--hair); border-radius:10px; padding:12px 16px; color:var(--mute); font-size:15px }
+.yw-body { display:flex; border-top:1px solid var(--hair) } .yw-list { width:600px; border-right:1px solid var(--hair) }
+.yw-row { display:grid; grid-template-columns:150px 54px 104px 1fr 54px; align-items:center; column-gap:10px; padding:14px 18px 12px 30px; border-bottom:1px solid var(--hair); position:relative }
+.yw-row[data-sel] { background:var(--soft) } .yw-row[data-sel]::before { content:''; position:absolute; left:10px; top:18px; border-left:9px solid #1a1a1a; border-top:6px solid transparent; border-bottom:6px solid transparent }
+.yw-date { color:var(--mute); font-size:14px } .yw-dept { grid-column:1 / span 2; color:var(--mute); font-size:12px; margin-top:4px }
+.yw-pill { justify-self:start; font-size:13px; font-weight:600; border-radius:999px; padding:3px 11px; background:var(--soft); color:var(--mute) } .yw-pill[data-in] { background:var(--inbg); color:var(--in) }
+.yw-name { font-weight:700 } .yw-co { white-space:nowrap; overflow:hidden; text-overflow:ellipsis } .yw-dur { text-align:right }
+.yw-detail { flex:1; padding:22px 26px; position:relative }
+.yw-who { display:grid; grid-template-columns:auto 80px auto; column-gap:24px; align-items:start }
+.yw-big { font-size:22px; font-weight:700 } .yw-tel { color:var(--mute); font-size:15px; margin-top:4px; letter-spacing:.04em } .yw-dir { text-align:center; color:var(--mute); font-size:12px; line-height:1.2 } .yw-dir b { display:block; font-size:22px; font-weight:400 }
+.yw-when { color:var(--mute); margin-top:10px; display:flex; gap:16px }
+.yw-tabs { display:flex; gap:30px; margin:20px -26px 0; padding:0 26px; border-bottom:1px solid var(--hair) } .yw-tab { padding:12px 4px; font-size:18px; color:var(--mute); border-bottom:3px solid transparent } .yw-tab[data-on] { color:#1a1a1a; font-weight:700; border-color:#1a1a1a }
+.yw-meta { color:var(--mute); font-size:13px; margin:16px 0 8px }
+.yw-ln { display:grid; grid-template-columns:100px 110px 1fr; padding:12px 8px; border-radius:10px; font-size:16px; line-height:1.6 }
+.yw-t { color:var(--mute) } .yw-sp { color:var(--in) } .yw-sp[data-two] { color:var(--sp2) }
+.yw-mark { border-radius:4px; padding:0 2px }
+.an-row { display:grid; grid-template-columns:150px 1fr 32px; align-items:start; padding:12px 10px; border-radius:12px }
+.an-k { color:#555; font-size:16px; padding-top:6px }
+.an-pill { display:inline-block; background:#F1F2F4; border-radius:999px; padding:5px 14px; font-size:16px } .an-pill b { font-weight:700; color:#1a1a1a } .an-pill span { color:#777; margin-left:6px }
+.an-why { color:#666; font-size:14px; margin-top:8px }
+.an-pen { width:20px; height:20px; margin-top:6px; fill:none; stroke:#1a1a1a; stroke-width:1.8; stroke-linejoin:round }
+.an-hr { height:1px; background:var(--hair); margin:14px 0 18px }
+.an-sec { display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:17px; margin-top:8px }
+.an-txt { font-size:16px; line-height:1.75; margin-top:10px } .an-src { color:#888; font-size:13px; margin-top:6px }
+.ch-win { display:flex }
+.ch-side { width:250px; background:var(--main); color:color-mix(in srgb, white 75%, var(--main)); padding:20px 14px; font-size:15px }
+.ch-ws { color:white; font-weight:700; font-size:18px; padding:0 8px 18px }
+.ch-ch { padding:7px 10px; border-radius:8px; margin-bottom:2px } .ch-ch[data-on] { background:var(--accent); color:var(--main); font-weight:700 }
+.ch-main { flex:1; display:flex; flex-direction:column; min-width:0 }
+.ch-top { padding:16px 24px; border-bottom:1px solid var(--hair); font-size:19px; font-weight:700 }
+.ch-msgs { padding:18px 24px; position:relative; flex:1 }
+.ch-msg { display:grid; grid-template-columns:48px 1fr; column-gap:14px }
+.ch-av { width:48px; height:48px; border-radius:10px; background:var(--main); color:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:18px }
+.ch-av[data-p] { background:var(--accent); color:var(--main) } .ch-av[data-q] { background:color-mix(in srgb, var(--main) 55%, white); color:white }
+.ch-who { font-weight:700; font-size:16px } .ch-who small { font-weight:400; color:var(--mute); margin-left:8px; font-size:13px } .ch-app { font-size:11px; background:var(--soft); color:var(--mute); border-radius:4px; padding:1px 6px; margin-left:6px; font-weight:700 }
+.ch-body { font-size:16px; line-height:1.65; margin-top:4px }
+.ch-h { font-weight:700; margin-top:10px; display:flex; align-items:center; gap:8px } .ch-dot { width:14px; height:14px; border-radius:50%; background:var(--warn) } .ch-dot[data-y] { background:#E8A33D }
+.ch-item { margin:6px 0 0; padding:8px 12px; border-radius:10px; position:relative }
+.ch-tag { display:inline-block; font-size:12px; font-weight:700; border:1px solid var(--hair); border-radius:6px; padding:1px 8px; margin-right:6px; color:var(--tealdk); background:white }
+.ch-warn { color:var(--warn); font-weight:700 }
+.ch-thread { width:520px; border-left:1px solid var(--hair); display:flex; flex-direction:column; background:white }
+.ch-reply { border:1px solid var(--hair); border-radius:10px; margin:14px 20px; padding:12px 14px; color:var(--mute); font-size:15px }
+.crm-top { display:flex; align-items:center; gap:16px; padding:18px 28px; border-bottom:1px solid var(--hair) }
+.crm-ico { width:44px; height:44px; border-radius:10px; background:var(--main); color:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px }
+.crm-obj { font-size:13px; color:var(--mute) } .crm-ttl { font-size:22px; font-weight:700 }
+.crm-body { padding:6px 28px 28px }
+.crm-sec { margin-top:18px } .crm-sh { font-size:17px; font-weight:700; color:var(--main); padding:10px 4px; border-bottom:2px solid var(--hair) }
+.crm-grid { display:grid; grid-template-columns:1fr 1fr; column-gap:48px }
+.crm-f { display:grid; grid-template-columns:150px 1fr; padding:10px 4px; border-bottom:1px solid var(--hair); font-size:15px; line-height:1.5 }
+.crm-k { color:var(--mute) } .crm-a { color:var(--link); text-decoration:underline; text-underline-offset:3px }
+.crm-tx { font-size:15px; line-height:1.8; padding:10px 4px; display:grid; grid-template-columns:150px 1fr }
+.ai-win { display:flex; height:882px }
+.ai-side { width:240px; background:var(--soft); border-right:1px solid var(--hair); padding:20px 14px; font-size:14px; color:var(--mute) }
+.ai-new { background:white; border:1px solid var(--hair); border-radius:10px; padding:10px 14px; color:#1a1a1a; font-weight:700; margin-bottom:18px }
+.ai-hist { padding:8px 10px; border-radius:8px } .ai-hist[data-on] { background:white; color:#1a1a1a }
+.ai-main { flex:1; display:flex; flex-direction:column; align-items:center; position:relative; min-width:0 }
+.ai-head { align-self:stretch; display:flex; justify-content:space-between; align-items:center; padding:14px 24px; border-bottom:1px solid var(--hair) }
+.ai-name { font-weight:700; font-size:17px } .ai-conn { font-size:13px; font-weight:700; color:var(--tealdk); background:var(--tealbg); border-radius:999px; padding:5px 14px }
+.ai-col { width:980px; flex:1; padding:28px 0; display:flex; flex-direction:column; gap:22px }
+.ai-you { align-self:flex-end; max-width:760px; background:var(--soft); border:1px solid var(--hair); border-radius:16px; padding:14px 20px; font-size:18px; line-height:1.6 }
+.ai-bot { display:grid; grid-template-columns:40px 1fr; column-gap:16px }
+.ai-mark { width:40px; height:40px; border-radius:50%; background:var(--main); color:var(--accent); font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center }
+.ai-txt { font-size:18px; line-height:1.75 }
+.ai-tool { font-size:15px; color:var(--mute); border:1px solid var(--hair); border-radius:10px; padding:8px 14px; display:inline-block; margin:0 8px 8px 0 }
+.ai-refs { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap } .ai-ref { font-size:14px; font-weight:700; color:var(--tealdk); background:white; border:1px solid color-mix(in srgb, var(--accent) 50%, white); border-radius:8px; padding:6px 12px }
+.ai-input { width:980px; margin:0 0 28px; border:1px solid var(--hair); border-radius:16px; padding:18px 20px; display:flex; align-items:center; gap:14px; box-shadow:0 6px 18px rgba(22,38,79,.06); font-size:18px }
+.ai-field { flex:1; position:relative; white-space:nowrap; overflow:hidden } .ai-send { width:40px; height:40px; border-radius:10px; background:var(--main); color:white; display:flex; align-items:center; justify-content:center; font-size:20px }
+.db { position:absolute; background:white; border-radius:18px; box-shadow:0 20px 50px rgba(22,38,79,.12); overflow:hidden }
+.db-h { padding:18px 22px; font-size:22px; font-weight:700; color:var(--main); border-bottom:1px solid var(--hair); display:flex; justify-content:space-between; align-items:center; position:relative }
+.db-n { font-size:16px; color:var(--mute); font-weight:400 }
+.db-badge { display:inline-block; font-size:14px; font-weight:700; border-radius:999px; padding:3px 12px; background:var(--tealbg); color:var(--tealdk) }
+.hd { width:920px; padding:40px 0 80px; font-size:16px; line-height:1.75; color:#1a1a1a }
+.hd-t { font-family:var(--serif, Georgia, serif); font-size:38px; line-height:1.35; font-weight:700; margin:0 } .hd-d { color:var(--mute); font-size:14px; margin:10px 0 0 }
+.hd-h { font-family:var(--serif, Georgia, serif); font-size:26px; font-weight:700; margin:40px 0 12px; color:var(--main) }
+.hd p { margin:0 0 10px }
+.hd-tb { width:100%; border-collapse:collapse; font-size:14px; line-height:1.6; margin:8px 0 10px } .hd-tb td, .hd-tb th { border:1px solid var(--hair); padding:8px 12px; text-align:left; vertical-align:top } .hd-tb th { background:var(--soft); color:var(--mute); font-weight:400 } .hd-tb td:first-child { white-space:nowrap; color:#444 }
+.hd-src { font-size:12px; font-weight:700; border-radius:5px; padding:2px 8px; background:var(--tealbg); color:var(--tealdk); white-space:nowrap }
+.hd ul { margin:4px 0 10px; padding-left:24px } .hd li { margin:4px 0 }
+</style></head><body>
+<div id="stage"></div>
+<div id="ctl"><button id="btn">❚❚</button><div id="bar"><div id="fill"></div></div><span id="tm">0:00</span></div>
+<script>
+(function(){
+const clamp01=x=>x<0?0:x>1?1:x, seg=(t,a,b)=>clamp01((t-a)/(b-a)), lerp=(a,b,p)=>a+(b-a)*p;
+const eo=p=>1-Math.pow(1-p,3), ei=p=>p*p*p, eio=p=>p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;
+const eob=(p,s)=>{s=s==null?1.70158:s;const q=p-1;return 1+(s+1)*q*q*q+s*q*q;};
+function h(html){const t=document.createElement('template');t.innerHTML=html.trim();return t.content.firstElementChild;}
+function css(text){const s=document.createElement('style');s.textContent=text;document.head.appendChild(s);}
+class Camera{constructor(el){this.el=el;this.k=[];}set(k){this.k=k;}
+ apply(t){const k=this.k;if(!k.length)return;let a=k[0],b=k[0],p=0;
+  if(t<=k[0].t){a=b=k[0];}else if(t>=k[k.length-1].t){a=b=k[k.length-1];}
+  else{for(let i=0;i<k.length-1;i++){if(t>=k[i].t&&t<=k[i+1].t){a=k[i];b=k[i+1];const e=b.ease||eio;p=e(seg(t,a.t,b.t));break;}}}
+  const cx=lerp(a.cx,b.cx,p),cy=lerp(a.cy,b.cy,p),z=lerp(a.z,b.z,p);
+  this.el.style.transform='translate('+(960-cx*z).toFixed(2)+'px,'+(540-cy*z).toFixed(2)+'px) scale('+z.toFixed(4)+')';}}
+const defs={};
+window.kit={seg,lerp,clamp01,eo,ei,eio,eob,h,css,Camera,scene:(id,d)=>{defs[id]=d;}};
+window.__film={defs,make(stage,dur,start){return Object.assign({},window.kit,{stage,dur,start});}};
+})();
+</script>
+<script>// One customer's story across the four practices. The desk holds YouWire, the team chat, the CRM and the AI chat (the last three are original designs). Fictional people and data throughout.
+window.W = {
+  win(cls, x, y, w, h, url, inner) {
+    return '<div class="win ' + cls + '" style="left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px">' +
+      '<div class="win-bar"><span class="win-dot"></span><span class="win-dot"></span><span class="win-dot"></span><span class="win-url">' + url + '</span></div>' + inner + '</div>';
+  },
+  // The bottom caption: what the viewer is seeing.
+  cap(cls, text) { return '<div class="cap ' + cls + '"><span>' + text + '</span></div>'; },
+  // The chapter label, top left, the same in every scene of a practice.
+  chapters: ['リスクは小さいうちに、責任者がいち早く検知する', '会話の記録は、AIにすべて任せる', '新メンバーは、わからないことは会話データに聞く', '情報の引き継ぎ元がいなくても、会話データから引き継ぐ'],
+  chap(cls, n) { return '<div class="chap ' + cls + '"><span class="chap-n">0' + n + '</span><span>' + W.chapters[n - 1] + '</span></div>'; },
+  // Both of a scene's labels, eased in together.
+  labels(t, chap, cap) {
+    const c = kit.eo(kit.seg(t, 0.15, 0.7));
+    if (chap) chap.style.opacity = c;
+    if (cap) { cap.style.opacity = c; cap.style.transform = 'translateY(' + kit.lerp(20, 0, c) + 'px)'; }
+  },
+  pen: '<svg class="an-pen" viewBox="0 0 20 20"><path d="M3 17l1-4L13.5 3.5l3 3L7 16z M12 5l3 3"/></svg>',
+  summary: '顧客・山本氏から、先週依頼した内線追加に伴う録音設定の変更について、まだ連絡がないとの指摘がYouWireサポートの佐藤にあった。佐藤はすぐに確認すると回答した。',
+  calls: [
+    ['2026-11-18 16:42', 1, '佐藤 健太', '青葉不動産販売株式会社', '4:12', 'サポート課'],
+    ['2026-11-18 16:30', 0, '田中 美咲', '株式会社ミナト物産', '6:05', '営業1課'],
+    ['2026-11-18 16:12', 1, '鈴木 翔', 'さくら人材サービス', '3:48', 'サポート課'],
+    ['2026-11-18 15:58', 0, '佐藤 健太', '北斗リース株式会社', '9:21', 'サポート課'],
+    ['2026-11-18 15:40', 1, '高橋 直樹', '株式会社みどり商会', '2:37', '営業2課'],
+    ['2026-11-18 15:21', 0, '田中 美咲', '東和ホールディングス', '5:14', '営業1課'],
+    ['2026-11-18 15:03', 1, '伊藤 涼', '株式会社ひかり工業', '7:02', 'サポート課'],
+    ['2026-11-18 14:47', 0, '高橋 直樹', '山手メディカル', '3:30', '営業2課'],
+  ],
+  ywList(sel) {
+    return '<div class="yw-list">' + W.calls.map((c, i) => '<div class="yw-row"' + (i === sel ? ' data-sel' : '') + '><span class="yw-date">' + c[0] + '</span><span class="yw-pill"' + (c[1] ? ' data-in' : '') + '>' + (c[1] ? 'IN' : 'OUT') + '</span><span class="yw-name">' + c[2] + '</span><span class="yw-co">' + c[3] + '</span><span class="yw-dur">' + c[4] + '</span><span class="yw-dept">' + c[5] + '</span></div>').join('') + '</div>';
+  },
+  ywWho(tab) {
+    const tabs = ['会話', '分析結果', 'メタデータ'];
+    return '<div class="yw-who"><div><div class="yw-big">佐藤 健太</div><div class="yw-tel">090-0000-1234</div></div><div class="yw-dir"><b>←</b>着信</div><div><div class="yw-big">青葉不動産販売株式会社</div><div class="yw-tel">03-0000-5678</div></div></div>' +
+      '<div class="yw-when"><span>2026-11-18 16:42</span><span>4:12</span><span>docomo</span></div>' +
+      '<div class="yw-tabs">' + tabs.map((s, i) => '<span class="yw-tab"' + (i === tab ? ' data-on' : '') + '>' + s + '</span>').join('') + '</div>';
+  },
+  ywScreen(cls, detail) {
+    return W.win(cls, 240, 80, 1440, 920, 'youwire.jp/conversations',
+      '<div class="yw-head"><span class="yw-h1">会話を探す</span><span class="yw-btn">＋ アップロード</span></div>' +
+      '<div class="yw-player"><span>0:00</span><span class="yw-track"></span><span>4:12</span><span class="yw-speed">×1.0</span></div>' +
+      '<div class="yw-search">条件や言葉を入力（候補から選ぶ / Enter で本文検索）</div>' +
+      '<div class="yw-body">' + W.ywList(0) + '<div class="yw-detail">' + detail + '</div></div>');
+  },
+  chat(cls, main, thread) {
+    const chans = ['# 全体連絡', '# cs-対応漏れチェック', '# cs-顧客対応サマリー', '# 営業部', '# 開発連携'];
+    return W.win(cls, 160, 80, 1600, 920, 'chat — csチーム',
+      '<div class="ch-win" style="height:882px"><div class="ch-side"><div class="ch-ws">CSチーム</div>' + chans.map((c, i) => '<div class="ch-ch"' + (i === 1 ? ' data-on' : '') + '>' + c + '</div>').join('') + '</div>' +
+      '<div class="ch-main"><div class="ch-top"># cs-対応漏れチェック</div><div class="ch-msgs">' + main + '</div></div>' + (thread || '') + '</div>');
+  },
+  digest(cls) {
+    const it = (ch, body, extra) => '<div class="ch-item ' + cls + '-it"><span class="ch-tag">' + ch + '</span>' + body + (extra || '') + '</div>';
+    return '<div class="ch-msg ' + cls + '"><div class="ch-av">✓</div><div><div class="ch-who">対応チェック<span class="ch-app">APP</span><small>9:00</small></div><div class="ch-body">' +
+      '<div style="font-weight:700">対応漏れチェック（11/20（金）9:00）　電話・メール・Web会議を横断</div>' +
+      '<div class="ch-h ' + cls + '-h"><span class="ch-dot"></span>期日超過（2件）</div>' +
+      it('電話', '<b>青葉不動産販売</b> / 担当:佐藤 / 「録音設定の変更（内線追加）」<br>11/18の通話で「すぐに確認します」と回答 → 連絡なし。先方は「少し困っている」と発言', '<br><span class="ch-warn">⚠ 2日連続で未対応</span>') +
+      it('メール', '<b>株式会社ミナト物産</b> / 担当:田中 / 「見積書の再送依頼」<br>11/17に「11/19中に送付します」と返信 → 未送付') +
+      '<div class="ch-h ' + cls + '-h"><span class="ch-dot" data-y></span>本日が期日（1件）</div>' +
+      it('Web会議', '<b>さくら人材サービス</b> / 担当:鈴木 / 「CRM連携の追加要件」<br>11/19の会議で「11/20中に回答」と約束 → 未回答') +
+      '</div></div></div>';
+  },
+  // The AI chat window (an original design): history rail, header, and what fills the main pane.
+  ai(cls, hist, head, conn, main) {
+    return W.win(cls, 160, 80, 1600, 920, 'Claude',
+      '<div class="ai-win"><div class="ai-side"><div class="ai-new">＋ 新規作成</div>' + hist.map((h, i) => '<div class="ai-hist"' + (i === 0 ? ' data-on' : '') + '>' + h + '</div>').join('') + '</div>' +
+      '<div class="ai-main"><div class="ai-head"><span class="ai-name">' + head + '</span><span class="ai-conn">' + conn + '</span></div>' + main + '</div></div>');
+  },
+  accounts: ['青葉不動産', '北斗リース', 'さくら人材', 'ミナト物産', 'みどり商会', 'ひかり工業', '東和商事', '山手メディカル', '白樺建設', '朝霧証券', '若葉保険', '港南運輸', '稲穂食品', '千里電機', '天海商事', '春風ホーム', '大樹信金', '鈴蘭薬品', '葵システム', '晴海物流', '紅葉観光', '光陽製作所', '蒼空通信', '結城工務店', '星野精機', '桜井商店', '海原水産', '岬リゾート', '銀河印刷', '望月農園'],
+  grid(cls, x, y) {
+    return '<div class="' + cls + '" style="position:absolute;left:' + x + 'px;top:' + y + 'px;display:grid;grid-template-columns:repeat(5,170px);gap:14px">' +
+      W.accounts.map((a) => '<div class="' + cls + '-c" style="position:relative;height:72px;border-radius:12px;background:white;border:2px solid var(--hair);display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:700;color:var(--main)">' + a + '<span class="' + cls + '-k" style="position:absolute;right:-8px;top:-10px;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--main);font-size:18px;display:flex;align-items:center;justify-content:center">✓</span></div>').join('') + '</div>';
+  },
+};</script>
+<script>(function(){
+const { seg, eo, eio, lerp } = kit;
+kit.scene('open', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div>' +
+      '<div class="open-art" style="position:absolute;right:-180px;top:-200px;width:900px;height:900px"><svg viewBox="0 0 900 900" style="width:100%;height:100%"><g style="fill:none;stroke:color-mix(in srgb, var(--main) 10%, transparent);stroke-width:2"><circle cx="450" cy="450" r="150"/><circle cx="450" cy="450" r="260"/><circle cx="450" cy="450" r="370"/><circle cx="450" cy="450" r="440"/></g></svg></div>' +
+      '<div class="words open-w" style="left:140px;top:280px;width:1100px">' +
+        '<p class="open-eye" style="font-size:30px;font-weight:700;color:var(--tealdk);letter-spacing:.06em">会話を共有する、4つの実践</p>' +
+        '<h1 class="line open-line">ある顧客との、<br>ひとつの会話から。</h1></div>' +
+      '<div class="open-card" style="position:absolute;left:1240px;top:430px;width:520px;background:white;border-radius:22px;box-shadow:0 24px 60px rgba(22,38,79,.14);padding:34px 38px">' +
+        '<div class="words" style="position:relative;gap:12px"><p style="font-size:20px;color:var(--mute)">顧客</p><p style="font-size:34px;font-weight:700;color:var(--main)">青葉不動産販売株式会社</p><p style="font-size:22px;color:var(--second)">窓口：山本様　・　担当：佐藤</p></div></div></div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    Object.assign(this, { w: q('.open-w'), eye: q('.open-eye'), line: q('.open-line'), card: q('.open-card'), art: q('.open-art') });
+  },
+  render(t) {
+    const rise = (el, a) => { const p = eo(seg(t, a, a + 0.6)); el.style.opacity = p; el.style.transform = 'translateY(' + lerp(26, 0, p) + 'px)'; };
+    rise(this.eye, -0.5); rise(this.line, -0.3);
+    const c = eo(seg(t, 1.0, 1.7)); this.card.style.opacity = c; this.card.style.transform = 'translateX(' + lerp(60, 0, c) + 'px)';
+    this.w.style.transform = 'translateX(' + (-2 * t).toFixed(1) + 'px)';
+    this.art.style.transform = 'rotate(' + (t * 2).toFixed(2) + 'deg)';
+  },
+});
+})();
+(function(){
+const { seg, eo, eio, lerp } = kit;
+kit.scene('call', {
+  init(kit) {
+    const lines = [
+      ['0:00–0:05', 1, 'お世話になっております。YouWireサポートの佐藤です。'],
+      ['0:06–0:12', 2, '青葉不動産の山本です。先週お願いした録音設定の変更の件なんですが…'],
+      ['0:13–0:16', 1, 'はい、内線追加の件ですね。'],
+      ['0:17–0:26', 2, '<span class="yw-mark call-mark">正直、まだご連絡いただけてなくて。社内に説明しないといけないので、少し困っているんです。</span>'],
+      ['0:27–0:31', 1, '大変申し訳ございません。すぐに確認いたします。'],
+    ];
+    const tx = '<div class="yw-meta">自動認識 · 2026-11-18 16:47 完了 · チャンネル 1/1</div>' +
+      lines.map((l) => '<div class="yw-ln call-ln"><span class="yw-t">' + l[0] + '</span><span class="yw-sp"' + (l[1] === 2 ? ' data-two' : '') + '>● 話者 ' + l[1] + '</span><span>' + l[2] + '</span></div>').join('');
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div><div class="layer call-cam">' + W.ywScreen('call-win', W.ywWho(0) + tx) + '</div>' + W.chap('call-chap', 1) + W.cap('call-cap', '電話の会話を、AIが文字起こし') + '</div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    this.cam = new kit.Camera(q('.call-cam'));
+    this.cam.set([{ t: 0, cx: 960, cy: 540, z: 1 }, { t: 0.8, cx: 960, cy: 540, z: 1 }, { t: 2.2, cx: 1250, cy: 700, z: 1.8, ease: eio }, { t: 7, cx: 1262, cy: 716, z: 1.84 }]);
+    this.lns = [...kit.stage.querySelectorAll('.call-ln')];
+    Object.assign(this, { hot: this.lns[3], mark: q('.call-mark'), chap: q('.call-chap'), cap: q('.call-cap') });
+  },
+  render(t) {
+    this.cam.apply(t);
+    const at = [-0.4, 2.3, 3.0, 3.6, 5.2];
+    this.lns.forEach((el, i) => { const p = eo(seg(t, at[i], at[i] + 0.5)); el.style.opacity = p; el.style.transform = 'translateY(' + lerp(14, 0, p) + 'px)'; });
+    const h = eo(seg(t, 4.4, 5.0));
+    this.mark.style.background = 'color-mix(in srgb, var(--warn) ' + Math.round(h * 22) + '%, transparent)';
+    this.hot.style.boxShadow = '0 0 0 ' + (2 * h).toFixed(1) + 'px color-mix(in srgb, var(--warn) ' + Math.round(h * 70) + '%, transparent)';
+    const c = eo(seg(t, 0.15, 0.7)); this.chap.style.opacity = c; this.cap.style.opacity = c; this.cap.style.transform = 'translateY(' + lerp(20, 0, c) + 'px)';
+  },
+});
+})();
+(function(){
+const { seg, eo, eio, lerp } = kit;
+kit.scene('analysis', {
+  init(kit) {
+    const row = (k, v, pct, why) => '<div class="an-row analysis-row"><span class="an-k">' + k + '</span><div><span class="an-pill"><b>' + v + '</b><span>' + pct + '</span></span><div class="an-why">' + why + '</div></div>' + W.pen + '</div>';
+    const body = '<div style="height:6px"></div>' +
+      row('顧客の温度感', '不満', '82%', '不満 — 依頼した設定変更の連絡がなく、社内説明に困っている') +
+      row('アラート分類', '対応遅延', '78%', '対応遅延 — 先週の依頼に対し、担当者からの連絡がない') +
+      row('対応結果', '未解決', '70%', '未解決 — 担当者が確認すると回答し、継続対応') +
+      row('会話種別', '保守・設定変更依頼', '88%', '保守・設定変更依頼 — 内線追加に伴う録音設定の変更');
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div><div class="layer analysis-cam">' + W.ywScreen('analysis-win', W.ywWho(1) + body) + '</div>' + W.chap('analysis-chap', 1) + W.cap('analysis-cap', 'AIが「不満の兆候」を判定') + '</div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    this.cam = new kit.Camera(q('.analysis-cam'));
+    this.cam.set([{ t: 0, cx: 1262, cy: 716, z: 1.84 }, { t: 5, cx: 1262, cy: 700, z: 1.9, ease: eio }]);
+    this.rows = [...kit.stage.querySelectorAll('.analysis-row')];
+    Object.assign(this, { chap: q('.analysis-chap'), cap: q('.analysis-cap') });
+  },
+  render(t) {
+    this.cam.apply(t);
+    this.rows.forEach((el, i) => { const p = eo(seg(t, 0.2 + i * 0.3, 0.7 + i * 0.3)); el.style.opacity = p; el.style.transform = 'translateY(' + lerp(14, 0, p) + 'px)'; });
+    [0, 1].forEach((i) => { const h = eo(seg(t, 1.7 + i * 0.35, 2.3 + i * 0.35)); const r = this.rows[i];
+      r.style.background = 'color-mix(in srgb, var(--warn) ' + Math.round(h * 9) + '%, white)';
+      r.style.boxShadow = '0 0 0 ' + (2.5 * h).toFixed(1) + 'px color-mix(in srgb, var(--warn) ' + Math.round(h * 65) + '%, transparent)'; });
+    this.chap.style.opacity = 1;
+    const c = eo(seg(t, 0.1, 0.6)); this.cap.style.opacity = c; this.cap.style.transform = 'translateY(' + lerp(20, 0, c) + 'px)';
+  },
+});
+})();
+(function(){
+const { seg, eo, eio, lerp } = kit;
+kit.scene('digest', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div><div class="layer digest-cam">' + W.chat('digest-win', W.digest('digest-m')) + '</div>' + W.chap('digest-chap', 1) + W.cap('digest-cap', '翌朝9時、電話・メール・会議を横断して通知') + '</div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    this.cam = new kit.Camera(q('.digest-cam'));
+    this.cam.set([{ t: 0, cx: 960, cy: 540, z: 1 }, { t: 1.2, cx: 960, cy: 540, z: 1 }, { t: 2.6, cx: 1010, cy: 430, z: 1.55, ease: eio }, { t: 6, cx: 1000, cy: 420, z: 1.6 }]);
+    this.msg = q('.ch-msg.digest-m');
+    this.parts = [...kit.stage.querySelectorAll('.digest-m-h, .digest-m-it')];
+    this.hot = q('.digest-m-it');
+    Object.assign(this, { chap: q('.digest-chap'), cap: q('.digest-cap') });
+  },
+  render(t) {
+    this.cam.apply(t);
+    const m = eo(seg(t, 0.2, 0.8)); this.msg.style.opacity = m; this.msg.style.transform = 'translateY(' + lerp(24, 0, m) + 'px)';
+    this.parts.forEach((el, i) => { el.style.opacity = eo(seg(t, 0.7 + i * 0.25, 1.2 + i * 0.25)); });
+    const h = eo(seg(t, 3.6, 4.3));
+    this.hot.style.background = 'color-mix(in srgb, var(--warn) ' + Math.round(h * 9) + '%, white)';
+    this.hot.style.boxShadow = '0 0 0 ' + (3 * h).toFixed(1) + 'px color-mix(in srgb, var(--warn) ' + Math.round(h * 65) + '%, transparent)';
+    this.chap.style.opacity = 1;
+    const c = eo(seg(t, 0.1, 0.6)); this.cap.style.opacity = c; this.cap.style.transform = 'translateY(' + lerp(20, 0, c) + 'px)';
+  },
+});
+})();
+(function(){
+const { seg, eo, eio, lerp } = kit;
+kit.scene('reply', {
+  init(kit) {
+    const msg = (av, attr, who, time, body, cls) => '<div class="ch-msg ' + cls + '" style="margin:16px 20px 0"><div class="ch-av"' + attr + '>' + av + '</div><div><div class="ch-who">' + who + '<small>' + time + '</small></div><div class="ch-body">' + body + '</div></div></div>';
+    const thread = '<div class="ch-thread"><div class="ch-top">スレッド</div>' +
+      '<div style="margin:16px 20px 0;padding:12px 14px;border-radius:10px;background:color-mix(in srgb, var(--warn) 8%, white);font-size:15px;line-height:1.6"><span class="ch-tag">電話</span><b>青葉不動産販売</b> / 担当:佐藤<br>「録音設定の変更（内線追加）」<br><span class="ch-warn">⚠ 2日連続で未対応</span></div>' +
+      msg('中', ' data-q', '中村（責任者）', '9:05', '@佐藤 さん　青葉不動産さんの件、先方が少し困っているようです。今日の午前中に連絡できそう？', 'reply-a') +
+      msg('佐', ' data-p', '佐藤', '9:08', 'すみません、漏れていました。10時にお電話します！', 'reply-b') +
+      '<div style="flex:1"></div><div class="ch-reply">返信する…</div></div>';
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div><div class="layer reply-cam">' + W.chat('reply-win', W.digest('reply-d'), thread) + '</div>' + W.chap('reply-chap', 1) + W.cap('reply-cap', 'クレームになる前に、責任者が拾う') + '</div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    this.cam = new kit.Camera(q('.reply-cam'));
+    this.cam.set([{ t: 0, cx: 1440, cy: 400, z: 1.5 }, { t: 5, cx: 1450, cy: 420, z: 1.55, ease: eio }]);
+    Object.assign(this, { a: q('.reply-a'), b: q('.reply-b'), chap: q('.reply-chap'), cap: q('.reply-cap') });
+  },
+  render(t) {
+    this.cam.apply(t);
+    const pop = (el, a) => { const p = eo(seg(t, a, a + 0.5)); el.style.opacity = p; el.style.transform = 'translateY(' + lerp(18, 0, p) + 'px)'; };
+    pop(this.a, 0.4); pop(this.b, 1.9);
+    this.chap.style.opacity = 1;
+    const c = eo(seg(t, 2.6, 3.2)); this.cap.style.opacity = c; this.cap.style.transform = 'translateY(' + lerp(20, 0, c) + 'px)';
+  },
+});
+})();
+(function(){
+const { seg, eo, ei, eio, eob, lerp } = kit;
+kit.scene('sync', {
+  init(kit) {
+    kit.css('.sync-card{position:absolute;top:380px;width:520px;height:280px;background:white;border-radius:24px;box-shadow:0 24px 60px rgba(22,38,79,.14);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}' +
+      '.sync-k{font-size:26px;color:var(--mute)}.sync-n{font-size:46px;font-weight:700;color:var(--main)}' +
+      '.sync-doc{position:absolute;left:0;top:0;width:150px;height:186px;background:white;border:2px solid var(--hair);border-radius:12px;box-shadow:0 14px 30px rgba(22,38,79,.18);padding:20px 18px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px}' +
+      '.sync-doc i{display:block;height:10px;border-radius:5px;background:color-mix(in srgb, var(--main) 18%, white)}' +
+      '.sync-ok{font-size:26px;font-weight:700;color:var(--tealdk);background:color-mix(in srgb, var(--accent) 16%, white);border-radius:999px;padding:6px 22px}');
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div>' +
+      '<div class="words sync-w" style="left:0;right:0;top:200px;align-items:center"><h2 class="line sync-line" style="font-size:56px">その通話は、そのまま記録に残る。</h2></div>' +
+      '<svg viewBox="0 0 1920 1080" style="position:absolute;inset:0;width:100%;height:100%"><path d="M720 520 Q960 360 1200 520" style="fill:none;stroke:color-mix(in srgb, var(--main) 30%, transparent);stroke-width:4;stroke-dasharray:4 14;stroke-linecap:round"/></svg>' +
+      '<div class="sync-card" style="left:200px"><span class="sync-k">通話・会議の記録</span><span class="sync-n">YouWire</span></div>' +
+      '<div class="sync-card sync-b" style="left:1200px"><span class="sync-k">会話レコード</span><span class="sync-n">Salesforce</span><span class="sync-ok">YWC-00001248 を作成</span></div>' +
+      '<div class="sync-doc"><i style="width:60%"></i><i></i><i></i><i style="width:80%"></i><i></i><i style="width:50%"></i></div>' +
+      W.chap('sync-chap', 2) + W.cap('sync-cap', '通話終了後、Salesforceへ自動連携') + '</div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    Object.assign(this, { doc: q('.sync-doc'), ok: q('.sync-ok'), b: q('.sync-b'), line: q('.sync-line'), chap: q('.sync-chap'), cap: q('.sync-cap') });
+  },
+  render(t) {
+    const l = eo(seg(t, -0.1, 0.5)); this.line.style.opacity = l; this.line.style.transform = 'translateY(' + lerp(20, 0, l) + 'px)';
+    const p = eio(seg(t, 0.8, 2.0));
+    const x = (1 - p) * (1 - p) * 385 + 2 * p * (1 - p) * 885 + p * p * 1385, y = (1 - p) * (1 - p) * 427 + 2 * p * (1 - p) * 250 + p * p * 427;
+    const land = seg(t, 2.0, 2.4);
+    this.doc.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) rotate(' + lerp(-6, 6, p).toFixed(2) + 'deg) scale(' + lerp(1, 0.5, ei(land)) + ')';
+    this.doc.style.opacity = 1 - land;
+    this.b.style.transform = 'scale(' + (1 + 0.03 * Math.sin(Math.PI * seg(t, 2.0, 2.6))).toFixed(3) + ')';
+    const o = seg(t, 2.2, 2.7); this.ok.style.opacity = eo(o); this.ok.style.transform = 'scale(' + (o > 0 ? lerp(0.85, 1, eob(o, 1.6)) : 0.85) + ')';
+    const c = eo(seg(t, 0.1, 0.6)); this.chap.style.opacity = c; this.cap.style.opacity = c; this.cap.style.transform = 'translateY(' + lerp(20, 0, c) + 'px)';
+  },
+});
+})();
+(function(){
+const { seg, eo, eio, lerp } = kit;
+Object.assign(W, {
+  // The CRM's conversation record (an original layout; fields as YouWire maps them; fictional data).
+  record(cls) {
+    const f = (k, v, x) => '<div class="crm-f ' + cls + '-f' + (x ? ' ' + cls + '-' + x : '') + '"><span class="crm-k">' + k + '</span><span>' + v + '</span></div>';
+    const a = (s) => '<span class="crm-a">' + s + '</span>';
+    const sec = (h, inner, x) => '<div class="crm-sec' + (x ? ' ' + cls + '-' + x : '') + '"><div class="crm-sh">' + h + '</div>' + inner + '</div>';
+    const tx = [['00:00:00', '佐藤 健太', 'お世話になっております。YouWireサポートの佐藤です。'], ['00:00:06', '山本 一郎（青葉不動産販売）', '先週お願いした録音設定の変更の件なんですが…'], ['00:00:13', '佐藤 健太', 'はい、内線追加の件ですね。'], ['00:00:17', '山本 一郎（青葉不動産販売）', '正直、まだご連絡いただけてなくて。少し困っているんです。'], ['00:00:27', '佐藤 健太', '大変申し訳ございません。すぐに確認いたします。']];
+    return '<div class="crm-top"><div class="crm-ico">会話</div><div><div class="crm-obj">会話</div><div class="crm-ttl">YWC-00001248</div></div></div><div class="crm-body"><div class="' + cls + '-in">' +
+      sec('会話の情報', '<div class="crm-grid"><div>' + f('会話番号', 'YWC-00001248') + f('会話種別', '電話') + f('通話方向', '着信') + f('会話名', '【サポート】青葉不動産販売：録音設定の変更') + f('再生 URL', a('https://example.youwire.jp/?detail=0000aaaa-1248'), 'url') + '</div><div>' +
+        f('開始日時', '2026/11/18 16:42') + f('終了日時', '2026/11/18 16:46') + f('通話時間（秒）', '252') + f('担当者メール', a('sato@example.com')) + f('所有者', a('佐藤 健太')) + '</div></div>') +
+      sec('番号と関連先', '<div class="crm-grid"><div>' + f('自番号', '090-0000-1234') + f('相手番号', '03-0000-5678') + f('参加者', '佐藤 健太<br>山本 一郎（青葉不動産販売）') + '</div><div>' +
+        f('取引先', a('青葉不動産販売株式会社'), 'acc') + f('取引先責任者', a('山本 一郎'), 'con') + f('商談', '') + f('ケース', '') + '</div></div>') +
+      sec('AI分析結果', f('要約', W.summary) + f('顧客の温度感', '不満') + f('アクションアイテム', '佐藤: 録音設定変更の対応状況を確認し、山本様へ連絡する'), 'ai') +
+      sec('会話テキスト', '<div class="crm-tx"><span class="crm-k">会話テキスト</span><div>' + tx.map((l) => '<div class="' + cls + '-tl">[' + l[0] + '] ' + l[1] + ': ' + l[2] + '</div>').join('') + '</div></div>') +
+      '</div></div>';
+  },
+});
+kit.scene('record', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div><div class="layer record-cam">' + W.win('record-win', 160, 80, 1600, 920, 'example.my.salesforce.com — 会話 YWC-00001248', '<div style="height:882px;overflow:hidden">' + W.record('rec') + '</div>') + '</div>' + W.chap('record-chap', 2) + W.cap('record-cap', '取引先にひも付いて、全件が自動で残る') + '</div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    this.cam = new kit.Camera(q('.record-cam'));
+    this.cam.set([{ t: 0, cx: 960, cy: 540, z: 1 }, { t: 0.8, cx: 960, cy: 540, z: 1 }, { t: 2.0, cx: 960, cy: 500, z: 1.32, ease: eio }, { t: 8, cx: 960, cy: 510, z: 1.36 }]);
+    this.glow = [q('.rec-acc'), q('.rec-con'), q('.rec-url')];
+    this.tl = [...kit.stage.querySelectorAll('.rec-tl')];
+    Object.assign(this, { ai: q('.rec-ai'), inner: q('.rec-in'), chap: q('.record-chap'), cap: q('.record-cap') });
+  },
+  render(t) {
+    this.cam.apply(t);
+    this.glow.forEach((el, i) => { const h = eo(seg(t, 2.2 + i * 0.35, 2.8 + i * 0.35)) * (1 - eio(seg(t, 4.2, 4.7))); el.style.background = 'color-mix(in srgb, var(--accent) ' + Math.round(h * 16) + '%, white)'; el.style.boxShadow = '0 0 0 ' + (2.5 * h).toFixed(1) + 'px color-mix(in srgb, var(--accent) ' + Math.round(h * 80) + '%, transparent)'; el.style.borderRadius = '8px'; });
+    this.inner.style.transform = 'translateY(' + (-lerp(0, 430, eio(seg(t, 4.4, 5.6)))).toFixed(1) + 'px)';
+    const a = eo(seg(t, 5.5, 6.0)); this.ai.style.background = 'color-mix(in srgb, var(--accent) ' + Math.round(a * 10) + '%, white)'; this.ai.style.boxShadow = '0 0 0 ' + (2.5 * a).toFixed(1) + 'px color-mix(in srgb, var(--accent) ' + Math.round(a * 70) + '%, transparent)'; this.ai.style.borderRadius = '10px';
+    this.tl.forEach((el, i) => { el.style.opacity = 0.25 + 0.75 * eo(seg(t, 6.0 + i * 0.25, 6.5 + i * 0.25)); });
+    this.chap.style.opacity = 1;
+    const c = eo(seg(t, 0.1, 0.6)); this.cap.style.opacity = c; this.cap.style.transform = 'translateY(' + lerp(20, 0, c) + 'px)';
+  },
+});
+})();
+(function(){
+const { seg, eo, eio, lerp } = kit;
+kit.scene('newbie', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div>' +
+      '<div class="words newbie-w" style="left:140px;top:330px;width:1000px"><h2 class="line newbie-a" style="font-size:68px">翌月、新しいメンバーが加わった。</h2><p class="sub newbie-b">聴く先は、先輩ではなく会話データ。</p></div>' +
+      '<div class="newbie-card" style="position:absolute;left:1240px;top:380px;width:500px;background:white;border-radius:22px;box-shadow:0 24px 60px rgba(22,38,79,.14);padding:32px 36px;display:flex;gap:24px;align-items:center">' +
+        '<div style="width:84px;height:84px;border-radius:50%;background:var(--accent);color:var(--main);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700">小</div>' +
+        '<div class="words" style="position:relative;gap:8px"><p style="font-size:32px;font-weight:700;color:var(--main)">小林（新メンバー）</p><p style="font-size:20px;color:var(--mute)">営業経験あり ・ YouWireは初めて</p></div></div>' +
+      W.chap('newbie-chap', 3) + '</div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    Object.assign(this, { a: q('.newbie-a'), b: q('.newbie-b'), card: q('.newbie-card'), chap: q('.newbie-chap'), w: q('.newbie-w') });
+  },
+  render(t) {
+    const rise = (el, a) => { const p = eo(seg(t, a, a + 0.6)); el.style.opacity = p; el.style.transform = 'translateY(' + lerp(24, 0, p) + 'px)'; };
+    rise(this.a, 0.1); rise(this.b, 1.2);
+    const c = eo(seg(t, 0.6, 1.3)); this.card.style.opacity = c; this.card.style.transform = 'translateX(' + lerp(60, 0, c) + 'px)';
+    this.chap.style.opacity = eo(seg(t, 0.1, 0.6));
+    this.w.style.transform = 'translateX(' + (-2 * t).toFixed(1) + 'px)';
+  },
+});
+})();
+(function(){
+const { seg, eo, eio, lerp } = kit;
+Object.assign(W, {
+  question: '固定電話は内線番号が取得できますか。',
+  wikiHist: ['固定電話の内線番号取得', 'Teams録音のヒアリング', '保存期間の考え方', '代理店経由の見積の流れ'],
+  wikiHead: 'YouWire Wiki 　/　固定電話の内線番号取得',
+  wikiConn: 'Notion ・ FAQ DB に接続中',
+  // The input row of the AI chat, with what is in it.
+  aiInput(inner) { return '<div class="ai-input"><div class="ai-field">' + inner + '</div><div class="ai-send">↑</div></div>'; },
+});
+kit.scene('ask', {
+  init(kit) {
+    const input = '<span class="ask-ph" style="position:absolute;left:0;top:0;color:var(--mute)">メッセージを入力…</span><span class="ask-q" style="display:inline-block">' + W.question + '</span><span class="ask-caret" style="position:absolute;top:2px;width:2px;height:24px;background:var(--main)"></span>';
+    const main = '<div class="ai-col"><div class="ai-you ask-you">' + W.question + '</div></div>' + W.aiInput(input);
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div><div class="layer ask-cam">' + W.ai('ask-win', W.wikiHist, W.wikiHead, W.wikiConn, main) + '</div>' + W.chap('ask-chap', 3) + W.cap('ask-cap', '迷ったら、まずClaudeに質問') + '</div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    this.cam = new kit.Camera(q('.ask-cam'));
+    this.cam.set([{ t: 0, cx: 960, cy: 540, z: 1 }, { t: 0.5, cx: 960, cy: 540, z: 1 }, { t: 1.6, cx: 1080, cy: 760, z: 1.45, ease: eio }, { t: 3.4, cx: 1080, cy: 760, z: 1.47 }, { t: 4.5, cx: 1080, cy: 470, z: 1.35, ease: eio }, { t: 5, cx: 1080, cy: 466, z: 1.36 }]);
+    Object.assign(this, { qs: q('.ask-q'), ph: q('.ask-ph'), caret: q('.ask-caret'), you: q('.ask-you'), chap: q('.ask-chap'), cap: q('.ask-cap') });
+  },
+  render(t) {
+    this.cam.apply(t);
+    const qw = this.qs.offsetWidth || 400;
+    const typed = seg(t, 1.2, 3.0), sent = t >= 3.4;
+    this.ph.style.opacity = typed > 0 || sent ? 0 : 1;
+    this.qs.style.clipPath = 'inset(0 ' + ((1 - typed) * 100).toFixed(2) + '% 0 0)';
+    this.qs.style.opacity = sent ? 0 : 1;
+    this.caret.style.left = (typed * qw).toFixed(1) + 'px';
+    this.caret.style.opacity = sent ? 0 : 1;
+    const y = eo(seg(t, 3.4, 3.9)); this.you.style.opacity = y; this.you.style.transform = 'translateY(' + lerp(30, 0, y) + 'px)';
+    const c = eo(seg(t, 0.1, 0.6)); this.chap.style.opacity = c; this.cap.style.opacity = c; this.cap.style.transform = 'translateY(' + lerp(20, 0, c) + 'px)';
+  },
+});
+})();
+(function(){
+const { seg, eo, eio, lerp } = kit;
+kit.scene('answer', {
+  init(kit) {
+    kit.css('.answer-b{margin:0}.answer-hd{margin:14px 0 2px;font-weight:700}.answer-ul{margin:2px 0;padding-left:26px}.answer-ul li{margin:2px 0}.answer-warn{color:#B4531A;font-weight:700}');
+    const bot = '<div class="ai-bot"><div class="ai-mark answer-mark">AI</div><div class="ai-txt" style="font-size:17px;line-height:1.7">' +
+      '<div class="ai-tool answer-x">Notion連携を使用しました ・ プロジェクトの知識を検索しました</div>' +
+      '<p class="answer-b answer-x"><b>結論：設置場所次第。</b>YouWire Officeは録音サーバーを「局線側」と「内線側」のどちらに置くかで、取れる情報が変わる。</p>' +
+      '<div class="answer-x"><p class="answer-hd">局線側に設置する場合 → 内線番号は取れない</p><ul class="answer-ul"><li>取れる情報：自番号、相手番号、録音開始日時、録音時間、方向</li><li>内線間の通話は録音されない</li></ul></div>' +
+      '<div class="answer-x"><p class="answer-hd">内線側に設置する場合 → 内線番号が取れる（条件あり）</p><ul class="answer-ul"><li>IP電話機とIP-PBXの間でパケットをミラーリングして録音</li><li>取れる情報：内線番号、相手番号、録音開始日時、録音時間、方向</li><li><span class="answer-warn">⚠</span> PBXのプロトコル仕様によっては、内線番号が取れない場合もある</li></ul></div>' +
+      '<div class="ai-refs answer-x"><span class="ai-ref answer-ref">サービス仕様書 §6-1 YouWire Office システム構成</span><span class="ai-ref answer-ref">FAQ「外線番号と内線番号の自番号情報を両方取得する方法はあるか」</span></div>' +
+      '</div></div>';
+    const main = '<div class="ai-col"><div class="ai-you">' + W.question + '</div>' + bot + '</div>' + W.aiInput('<span style="color:var(--mute)">メッセージを入力…</span>');
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div><div class="layer answer-cam">' + W.ai('answer-win', W.wikiHist, W.wikiHead, W.wikiConn, main) + '</div>' + W.chap('answer-chap', 3) + W.cap('answer-cap', '最新のFAQから、すぐに答えが返る') + '</div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    this.cam = new kit.Camera(q('.answer-cam'));
+    this.cam.set([{ t: 0, cx: 1080, cy: 466, z: 1.36 }, { t: 0.8, cx: 1080, cy: 466, z: 1.36 }, { t: 3.0, cx: 1080, cy: 560, z: 1.3, ease: eio }, { t: 7, cx: 1080, cy: 572, z: 1.33 }]);
+    this.parts = [...kit.stage.querySelectorAll('.answer-x')];
+    this.refs = [...kit.stage.querySelectorAll('.answer-ref')];
+    Object.assign(this, { mark: q('.answer-mark'), chap: q('.answer-chap'), cap: q('.answer-cap') });
+  },
+  render(t) {
+    this.cam.apply(t);
+    const at = [0.2, 0.8, 1.7, 2.7, 3.9];
+    this.parts.forEach((el, i) => { const p = eo(seg(t, at[i], at[i] + 0.5)); el.style.opacity = p; el.style.transform = 'translateY(' + lerp(12, 0, p) + 'px)'; });
+    this.mark.style.opacity = eo(seg(t, 0, 0.3));
+    this.refs.forEach((el) => { const h = eo(seg(t, 4.6, 5.2)); el.style.boxShadow = '0 0 0 ' + (3 * h).toFixed(1) + 'px color-mix(in srgb, var(--accent) ' + Math.round(h * 60) + '%, transparent)'; });
+    this.chap.style.opacity = 1;
+    const c = eo(seg(t, 0.1, 0.6)); this.cap.style.opacity = c; this.cap.style.transform = 'translateY(' + lerp(20, 0, c) + 'px)';
+  },
+});
+})();
+(function(){
+const { seg, eo, eio, eob, lerp } = kit;
+kit.scene('grow', {
+  init(kit) {
+    kit.css('.grow-ar{position:absolute;top:440px;width:110px;height:60px}.grow-al{position:absolute;top:510px;width:220px;text-align:center;font-size:20px;font-weight:700;color:var(--tealdk)}' +
+      '.grow-ok{position:absolute;right:20px;bottom:20px;font-size:26px;font-weight:700;color:white;background:var(--main);border-radius:12px;padding:8px 20px}' +
+      '.grow-tr{display:grid;grid-template-columns:1fr 96px 96px;column-gap:10px;align-items:center;padding:11px 18px;border-bottom:1px solid var(--hair);font-size:15px}' +
+      '.grow-th{color:var(--mute);font-size:13px;padding:9px 18px}' +
+      '.grow-tag{justify-self:start;font-size:13px;border-radius:5px;padding:2px 8px;background:#E6F2EA;color:#2F6B45}.grow-tag[data-m]{background:#E3EDFA;color:#2E5A9A}.grow-tag[data-o]{background:#FBEBDD;color:#8A4B16}.grow-tag[data-v]{background:#FBE4EC;color:#9A2E55}' +
+      '.grow-st{justify-self:start;font-size:13px;border-radius:5px;padding:2px 8px;background:#E3EDFA;color:#2E5A9A}.grow-st[data-h]{background:#FBE4EC;color:#9A2E55}');
+    const arrow = (x, cls) => '<svg class="grow-ar ' + cls + '" viewBox="0 0 110 60" style="left:' + x + 'px"><path d="M8 30 H92 M70 10 L96 30 L70 50" style="fill:none;stroke:var(--accent);stroke-width:7;stroke-linecap:round;stroke-linejoin:round"/></svg>';
+    const row = (qn, tag, attr, cls) => '<div class="grow-tr' + (cls ? ' ' + cls : '') + '"><span>' + qn + '</span><span class="grow-tag"' + attr + '>' + tag + '</span><span class="grow-st">確認済み</span></div>';
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div>' +
+      '<div class="words" style="left:110px;top:150px"><p class="sub" style="font-size:40px;font-weight:700;color:var(--main)">最新のFAQを、網羅的にデータベース化</p></div>' +
+      '<div class="db grow-a" style="left:110px;top:280px;width:410px;height:420px"><div class="db-h">録音・会話<span class="db-n">YouWire</span></div>' +
+        '<div style="padding:20px 22px;font-size:17px;line-height:1.7"><div style="color:var(--mute);font-size:15px">YWC-00001248 ・ 青葉不動産販売 ・ 電話</div><div style="margin-top:10px">「内線を追加したら、録音の設定も変える必要があるんですか？」</div></div></div>' +
+      arrow(530, 'grow-a1') + '<div class="grow-al grow-l1" style="left:475px">AIがQAを抽出</div>' +
+      '<div class="db grow-b" style="left:650px;top:280px;width:420px;height:420px"><div class="db-h">FAQ候補DB<span class="db-n">Notion</span></div>' +
+        '<div class="grow-cand" style="padding:20px 22px;font-size:17px;line-height:1.7"><div style="font-weight:700">Q. 内線を追加したとき、録音設定の変更は必要か？</div>' +
+          '<div style="margin-top:12px"><span class="db-badge grow-badge">既存FAQに該当なし</span></div>' +
+          '<div style="margin-top:14px;font-size:15px;color:var(--mute);display:flex;gap:10px;align-items:center">要確認 <span style="position:relative;display:inline-block;width:90px;height:24px"><span class="grow-st grow-hi" data-h style="position:absolute;left:0;top:0">高</span><span class="grow-st grow-done" style="position:absolute;left:0;top:0">確認済み</span></span></div></div>' +
+        '<div class="grow-ok">確認 OK</div></div>' +
+      arrow(1080, 'grow-a2') + '<div class="grow-al grow-l2" style="left:1025px">OKのものだけ登録</div>' +
+      '<div class="db grow-c" style="left:1200px;top:280px;width:610px;height:420px"><div class="db-h">YouWireFAQデータベース<span class="db-n grow-count">168件</span><span class="db-n grow-count2" style="position:absolute;right:22px">169件</span></div>' +
+        '<div class="grow-tr grow-th"><span>質問</span><span>タグ</span><span>要確認</span></div>' +
+        row('内線を追加したとき、録音設定の変更は必要か？', 'Office', ' data-o', 'grow-new') +
+        '<div class="grow-old">' + row('mp3/wav、ステレオ/モノラルの違いについて', '音声認識', ' data-v') + row('Amazon Connectとの連携は可能でしょうか？', 'Office', ' data-o') + row('1GBあたりどれくらい通話録音できますか？', '共通', '') + row('YouWireMobileの利用開始までどれくらいかかりますか？', 'Mobile', ' data-m') + '</div></div>' +
+      W.chap('grow-chap', 3) + W.cap('grow-cap', '日々の会話から、FAQを常に最新・網羅的に') + '</div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    Object.assign(this, { a: q('.grow-a'), b: q('.grow-b'), c: q('.grow-c'), a1: q('.grow-a1'), a2: q('.grow-a2'), l1: q('.grow-l1'), l2: q('.grow-l2'), cand: q('.grow-cand'), badge: q('.grow-badge'), ok: q('.grow-ok'), hi: q('.grow-hi'), done: q('.grow-done'), nw: q('.grow-new'), old: q('.grow-old'), n1: q('.grow-count'), n2: q('.grow-count2'), chap: q('.grow-chap'), cap: q('.grow-cap') });
+  },
+  render(t) {
+    const card = (el, a) => { const p = eo(seg(t, a, a + 0.5)); el.style.opacity = p; el.style.transform = 'translateY(' + lerp(24, 0, p) + 'px)'; };
+    card(this.a, -0.2); card(this.b, 0.1); card(this.c, 0.3);
+    const ar = (el, l, a) => { const p = eo(seg(t, a, a + 0.4)); el.style.opacity = p; el.style.transform = 'translateX(' + lerp(-20, 0, p) + 'px)'; l.style.opacity = p; };
+    ar(this.a1, this.l1, 0.7); ar(this.a2, this.l2, 3.0);
+    const cd = eo(seg(t, 1.0, 1.4)); this.cand.style.opacity = cd; this.cand.style.transform = 'translateX(' + lerp(-24, 0, cd) + 'px)';
+    const bd = seg(t, 1.6, 2.0); this.badge.style.opacity = eo(bd); this.badge.style.transform = 'scale(' + (bd > 0 ? lerp(0.8, 1, eob(bd, 1.5)) : 0.8) + ')';
+    const ok = seg(t, 2.3, 2.7); this.ok.style.opacity = eo(ok); this.ok.style.transform = 'scale(' + (ok > 0 ? lerp(1.4, 1, eob(ok, 1.2)) : 1.4) + ') rotate(-4deg)';
+    const sw = eio(seg(t, 2.5, 2.9)); this.hi.style.opacity = 1 - sw; this.done.style.opacity = sw;
+    const nw = seg(t, 3.4, 3.9); this.nw.style.opacity = eo(nw); this.nw.style.background = 'color-mix(in srgb, var(--accent) ' + Math.round(14 * eo(nw)) + '%, white)';
+    this.old.style.transform = 'translateY(' + lerp(-44, 0, eio(nw)).toFixed(1) + 'px)'; this.nw.style.transform = 'translateY(' + lerp(-14, 0, eo(nw)) + 'px)';
+    const n = eio(seg(t, 3.7, 4.0)); this.n1.style.opacity = 1 - n; this.n2.style.opacity = n;
+    this.c.style.boxShadow = '0 20px 50px rgba(22,38,79,.12), 0 0 0 ' + (3 * eo(seg(t, 3.6, 4.0))).toFixed(1) + 'px color-mix(in srgb, var(--accent) 70%, transparent)';
+    this.chap.style.opacity = 1;
+    const c = eo(seg(t, 0.1, 0.6)); this.cap.style.opacity = c; this.cap.style.transform = 'translateY(' + lerp(20, 0, c) + 'px)';
+  },
+});
+})();
+(function(){
+const { seg, eo, eio, lerp } = kit;
+kit.scene('away', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div>' +
+      '<div class="words away-w" style="left:130px;top:340px;width:760px"><p class="sub away-a" style="font-size:40px;font-weight:700;color:var(--tealdk)">そして、担当の佐藤が急に不在に。</p><h2 class="line away-b" style="font-size:68px">30社の引き継ぎ。</h2><p class="sub away-c">聴ける人は、いない。</p></div>' +
+      W.grid('away-g', 940, 230) + W.chap('away-chap', 4) + '</div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    this.cards = [...kit.stage.querySelectorAll('.away-g-c')];
+    kit.stage.querySelectorAll('.away-g-k').forEach((k) => { k.style.opacity = 0; });
+    Object.assign(this, { a: q('.away-a'), b: q('.away-b'), c: q('.away-c'), g: q('.away-g'), chap: q('.away-chap') });
+  },
+  render(t) {
+    const rise = (el, a) => { const p = eo(seg(t, a, a + 0.5)); el.style.opacity = p; el.style.transform = 'translateY(' + lerp(22, 0, p) + 'px)'; };
+    rise(this.a, -0.1); rise(this.b, 0.7); rise(this.c, 1.7);
+    this.cards.forEach((c, i) => { const p = eo(seg(t, -0.2 + i * 0.03, 0.3 + i * 0.03)); const dim = eio(seg(t, 1.6, 2.4)); c.style.opacity = p * (1 - 0.5 * dim); c.style.filter = 'grayscale(' + dim + ')'; });
+    this.g.style.transform = 'scale(' + (1 + 0.006 * t).toFixed(4) + ')';
+    this.chap.style.opacity = eo(seg(t, 0.1, 0.6));
+  },
+});
+})();
+(function(){
+const { seg, eo, eio, lerp } = kit;
+Object.assign(W, {
+  handHist: ['青葉不動産販売の取引経緯と引き継ぎ整理', '北斗リースの取引経緯と引き継ぎ整理', 'さくら人材の取引経緯と引き継ぎ整理', 'ミナト物産の取引経緯と引き継ぎ整理'],
+  handConn: 'YouWire ・ Gmail ・ Slack ・ Salesforce に接続中',
+  // The handover document Claude writes for Aoba Real Estate (fictional), every section of it.
+  handover(cls) {
+    const tr = (a, b) => '<tr><td>' + a + '</td><td>' + b + '</td></tr>';
+    const ev = (d, e, s) => '<tr><td>' + d + '</td><td>' + e + '</td><td><span class="hd-src">' + s + '</span></td></tr>';
+    const todo = (a, b, c) => '<tr><td>' + a + '</td><td>' + b + '</td><td>' + c + '</td></tr>';
+    return '<div class="hd ' + cls + '">' +
+      '<h1 class="hd-t">青葉不動産販売株式会社様 YouWire案件 引き継ぎ資料</h1><p class="hd-d">2026年12月22日 ・ YouWire・Gmail・Slack・Salesforceのやり取りをもとに作成</p>' +
+      '<h2 class="hd-h">案件概要</h2><p>本社・各支店で運用中。内線追加に伴う録音設定の変更は11月に完了。残りは月次運用報告の定着と、支店追加の見積もり。</p>' +
+      '<table class="hd-tb"><tr><th>項目</th><th>内容</th></tr>' + tr('商流', '青葉不動産販売（エンド）← 販売代理店B社（元請）← GF（YouWire提供・構築・保守）') + tr('案件名', '営業通話の録音・応対品質の見える化') + tr('先方窓口', '総務部（主担当＋実務担当の2名体制）') + tr('構築契約', '代理店経由。拠点録音装置の設置までが契約範囲') + tr('月額利用', 'クラウド利用料（別契約）。保存容量は支店追加時に見直し') + tr('保守契約', '代理店経由。初回3年、以降1年自動更新') + tr('従量課金', '要約機能は使用量に応じて請求') + tr('構成', 'クラウド／拠点録音装置 8台：本社・各支店。内線側に設置') + tr('社内連絡', 'Slack共有チャンネル「青葉不動産販売_YouWire」') + '</table>' +
+      '<p style="color:var(--mute);font-size:14px">担当者の氏名・連絡先は個人情報のため本資料では省略。Slackチャンネルとメール署名を参照。</p>' +
+      '<h2 class="hd-h">時系列の経緯</h2><p>11月の内線追加で対応が遅れかけたが、責任者経由で即日フォローし、信頼を回復。</p>' +
+      '<table class="hd-tb"><tr><th>日付</th><th>出来事</th><th>出典</th></tr>' + ev('12/10', '支店追加の相談を受ける。見積もりは代理店経由で提出予定', 'Web会議') + ev('12/02', '初回の月次運用報告を送付', 'メール') + ev('11/21', '録音設定の変更が完了。先方からお礼の連絡', 'メール') + ev('11/20', '対応漏れチェックで検知 → 責任者から確認 → 10時に電話でフォロー', 'Slack') + ev('11/18', '内線追加の録音設定について催促。先方は「少し困っている」', '通話') + ev('11/11', '内線追加に伴う録音設定の変更を依頼される', '通話') + ev('09/30', '保守契約を締結', 'Salesforce') + ev('07/15', '全拠点で録音開始', 'Slack') + '</table>' +
+      '<h2 class="hd-h">留意点</h2><ul><li>対応の遅れに敏感。依頼には当日中に一次回答を入れる</li><li>内線側に設置しているため、内線の追加・変更時は録音設定の確認が必要</li><li>録音データの取り出しや共有は必ず事前に確認する</li><li>代理店B社を必ずccに入れる（先方からの依頼）</li></ul>' +
+      '<h2 class="hd-h">未対応事項・次のアクション</h2><table class="hd-tb"><tr><th>項目</th><th>期日</th><th>状態</th></tr>' + todo('支店追加の見積もり提出', '12/26', '代理店と調整中') + todo('保存容量の見直し提案', '1月中', '未着手') + todo('月次運用報告（2回目）', '1月第1週', 'フォーマット合意済み') + todo('担当変更のご挨拶', '早めに', '未対応') + '</table>' +
+      '<h2 class="hd-h">関係者</h2><ul><li>先方：総務部（主担当・実務担当）</li><li>代理店：B社 営業担当</li><li>社内：開発（構成・保守）、営業アシスタント（請求）</li></ul>' +
+      '</div>';
+  },
+});
+kit.scene('handask', {
+  init(kit) {
+    const prompt = '青葉不動産販売さまについて、YouWireやGmail、Slackでのやり取りを整理して。またSalesforceで既に取り込まれているデータも確認ね。<br>時系列の経緯、留意点、未対応事項、次のアクションなどがほしい。これは引き継ぎ用の情報整理です。';
+    const tool = (s) => '<span class="ai-tool handask-tool">' + s + '</span>';
+    const main = '<div class="ai-col"><div class="ai-you handask-you" style="font-size:17px">' + prompt + '</div>' +
+      '<div class="ai-bot"><div class="ai-mark handask-mark">AI</div><div class="ai-txt">' +
+        '<div class="handask-sum" style="font-size:15px;color:var(--mute);margin-bottom:8px">4個の連携を使用しました ・ ツールを読み込みました</div>' +
+        '<div>' + tool('YouWire（通話）') + tool('Gmail') + tool('Slack') + tool('Salesforce') + '</div>' +
+        '<p class="handask-p" style="margin:6px 0 0">骨組みできた。今から概要から埋めていくね。</p>' +
+      '</div></div></div>' + W.aiInput('<span style="color:var(--mute)">メッセージを入力…</span>');
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div><div class="layer handask-cam">' + W.ai('handask-win', W.handHist, W.handHist[0], W.handConn, main) + '</div>' + W.chap('handask-chap', 4) + W.cap('handask-cap', '1社ずつ、Claudeに経緯の整理を頼む') + '</div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    this.cam = new kit.Camera(q('.handask-cam'));
+    this.cam.set([{ t: 0, cx: 1080, cy: 470, z: 1.33 }, { t: 4, cx: 1080, cy: 480, z: 1.36, ease: eio }]);
+    this.tools = [...kit.stage.querySelectorAll('.handask-tool')];
+    Object.assign(this, { you: q('.handask-you'), mark: q('.handask-mark'), sum: q('.handask-sum'), p: q('.handask-p'), chap: q('.handask-chap'), cap: q('.handask-cap') });
+  },
+  render(t) {
+    this.cam.apply(t);
+    const y = eo(seg(t, 0.1, 0.6)); this.you.style.opacity = y; this.you.style.transform = 'translateY(' + lerp(24, 0, y) + 'px)';
+    this.mark.style.opacity = eo(seg(t, 1.0, 1.3)); this.sum.style.opacity = eo(seg(t, 1.1, 1.5));
+    this.tools.forEach((el, i) => { const p = eo(seg(t, 1.4 + i * 0.25, 1.8 + i * 0.25)); el.style.opacity = p; el.style.transform = 'translateY(' + lerp(10, 0, p) + 'px)'; });
+    const p = eo(seg(t, 2.7, 3.1)); this.p.style.opacity = p;
+    this.chap.style.opacity = 1;
+    const c = eo(seg(t, 0.1, 0.6)); this.cap.style.opacity = c; this.cap.style.transform = 'translateY(' + lerp(20, 0, c) + 'px)';
+  },
+});
+})();
+(function(){
+const { seg, eo, eio, lerp } = kit;
+kit.scene('doc', {
+  init(kit) {
+    const main = '<div class="doc-view" style="align-self:stretch;flex:1;overflow:hidden;display:flex;justify-content:center;min-height:0"><div class="doc-in" style="align-self:flex-start">' + W.handover('doc-hd') + '</div></div>';
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div><div class="layer doc-cam">' + W.ai('doc-win', W.handHist, '青葉不動産販売様 YouWire案件 引き継ぎ資料', W.handConn, main) + '</div>' + W.chap('doc-chap', 4) + W.cap('doc-cap', '通話・メール・Slack・Salesforceから、経緯を一冊に') + '</div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    this.cam = new kit.Camera(q('.doc-cam'));
+    this.cam.set([{ t: 0, cx: 1080, cy: 520, z: 1.12 }, { t: 10, cx: 1080, cy: 540, z: 1.16, ease: eio }]);
+    Object.assign(this, { view: q('.doc-view'), inn: q('.doc-in'), hd: q('.doc-hd'), chap: q('.doc-chap'), cap: q('.doc-cap') });
+  },
+  render(t) {
+    this.cam.apply(t);
+    // Measured each frame (the stage may be hidden while init runs): the whole document, title to last line.
+    const max = Math.max(0, this.inn.scrollHeight - this.view.clientHeight + 40);
+    this.inn.style.transform = 'translateY(' + (-max * eio(seg(t, 0.8, 9.4))).toFixed(1) + 'px)';
+    this.hd.style.opacity = eo(seg(t, 0, 0.5));
+    this.chap.style.opacity = 1;
+    const c = eo(seg(t, 0.1, 0.6)); this.cap.style.opacity = c * (1 - eio(seg(t, 2.4, 3.0))); this.cap.style.transform = 'translateY(' + lerp(20, 0, c) + 'px)';
+  },
+});
+})();
+(function(){
+const { seg, eo, eio, eob, lerp } = kit;
+kit.scene('thirty', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground"><div class="desk"></div>' +
+      '<div class="words" style="left:507px;top:150px"><p class="sub" style="font-size:36px;font-weight:700;color:var(--main)">1社ずつ、丁寧に確認</p></div>' +
+      '<div style="position:absolute;right:507px;top:146px;display:flex;gap:18px;align-items:baseline"><span class="thirty-day" style="font-size:30px;font-weight:700;color:var(--tealdk)"></span><span class="thirty-n" style="font-size:44px;font-weight:700;color:var(--main);font-variant-numeric:tabular-nums"></span></div>' +
+      W.grid('thirty-g', 507, 240) + W.chap('thirty-chap', 4) + W.cap('thirty-cap', '担当者不在のまま、30社を約1週間でキャッチアップ') + '</div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    this.cards = [...kit.stage.querySelectorAll('.thirty-g-c')];
+    this.ks = [...kit.stage.querySelectorAll('.thirty-g-k')];
+    Object.assign(this, { day: q('.thirty-day'), n: q('.thirty-n'), chap: q('.thirty-chap'), cap: q('.thirty-cap') });
+  },
+  render(t) {
+    const T0 = 0.3, STEP = 0.12;
+    let done = 0;
+    this.cards.forEach((c, i) => { const a = T0 + i * STEP, p = seg(t, a, a + 0.35);
+      if (t >= a + 0.2) done = i + 1;
+      c.style.borderColor = 'color-mix(in srgb, var(--accent) ' + Math.round(80 * eo(p)) + '%, var(--hair))';
+      c.style.background = 'color-mix(in srgb, var(--accent) ' + Math.round(10 * eo(p)) + '%, white)';
+      const k = this.ks[i]; k.style.opacity = eo(p); k.style.transform = 'scale(' + (p > 0 ? lerp(0.4, 1, eob(p, 1.6)) : 0.4) + ')'; });
+    this.n.textContent = done + ' / 30';
+    this.day.textContent = Math.min(5, Math.floor(Math.max(0, done - 1) / 6) + 1) + '日目';
+    this.chap.style.opacity = 1;
+    const c = eo(seg(t, 3.6, 4.1)); this.cap.style.opacity = c; this.cap.style.transform = 'translateY(' + lerp(20, 0, c) + 'px)';
+  },
+});
+})();
+(function(){
+const { seg, eo, eio, lerp } = kit;
+kit.scene('end', {
+  init(kit) {
+    const res = [['1', '小さな不満の検知', '約8割', 'を未然に防止（現場の体感）'], ['2', '記録', '全件', 'が自動で残る'], ['3', '新メンバーの独り立ち', '2ヶ月→2週間', 'FAQ 168件を網羅的に'], ['4', '担当不在での引き継ぎ', '30社', 'を約1週間で']];
+    kit.stage.append(kit.h('<div class="ground" style="background:var(--main)">' +
+      '<div class="words end-w" style="left:140px;top:150px;width:1640px"><p class="end-k" style="font-size:30px;font-weight:700;color:var(--accent)">会話を共有する、4つの実践</p><h2 class="line end-line" style="color:white;font-size:80px">少人数CSの答えは、会話の共有だった。</h2></div>' +
+      '<div style="position:absolute;left:140px;top:520px;width:1640px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px">' +
+        res.map((r) => '<div class="end-c" style="background:color-mix(in srgb, white 8%, var(--main));border:1px solid color-mix(in srgb, white 18%, var(--main));border-radius:20px;padding:28px 28px 30px"><div class="words" style="position:relative;gap:10px"><p style="font-size:20px;font-weight:700;color:var(--accent)">' + '0' + r[0] + '　' + r[1] + '</p><p style="font-size:52px;font-weight:700;color:white;line-height:1.15">' + r[2] + '</p><p style="font-size:20px;color:color-mix(in srgb, white 75%, var(--main))">' + r[3] + '</p></div></div>').join('') +
+      '</div></div>'));
+    const q = (s) => kit.stage.querySelector(s);
+    this.cards = [...kit.stage.querySelectorAll('.end-c')];
+    Object.assign(this, { k: q('.end-k'), line: q('.end-line'), w: q('.end-w') });
+  },
+  render(t) {
+    const rise = (el, a) => { const p = eo(seg(t, a, a + 0.6)); el.style.opacity = p; el.style.transform = 'translateY(' + lerp(26, 0, p) + 'px)'; };
+    rise(this.k, 0); rise(this.line, 0.3);
+    this.cards.forEach((c, i) => rise(c, 1.2 + i * 0.3));
+    this.w.style.transform = 'scale(' + (1 + 0.004 * t).toFixed(4) + ')';
+  },
+});
+})();
+</script>
+<script>
+(async function(){
+const META=[{"id": "open", "dur": 4}, {"id": "call", "dur": 7}, {"id": "analysis", "dur": 5}, {"id": "digest", "dur": 6}, {"id": "reply", "dur": 5}, {"id": "sync", "dur": 4}, {"id": "record", "dur": 8}, {"id": "newbie", "dur": 4}, {"id": "ask", "dur": 5}, {"id": "answer", "dur": 7}, {"id": "grow", "dur": 6}, {"id": "away", "dur": 4}, {"id": "handask", "dur": 4}, {"id": "doc", "dur": 10}, {"id": "thirty", "dur": 5}, {"id": "end", "dur": 6}], stageEl=document.getElementById('stage'), total=META.reduce((s,m)=>s+m.dur,0);
+let acc=0; const S=[];
+for(const m of META){const el=document.createElement('div');el.className='scene-box';stageEl.appendChild(el);
+ const d=__film.defs[m.id];const inst=Object.create(d);const k=__film.make(el,m.dur,acc);
+ S.push({m,el,inst,k,start:acc});acc+=m.dur;}
+for(const s of S){s.el.style.display='block';if(s.inst.init)await s.inst.init(s.k);s.el.style.display='none';}
+let t=0,playing=true,last=performance.now(),cur=null;
+const bar=document.getElementById('bar'),fill=document.getElementById('fill'),tm=document.getElementById('tm'),btn=document.getElementById('btn');
+function draw(){let s=S.find(x=>t>=x.start&&t<x.start+x.m.dur)||S[S.length-1];
+ if(cur!==s){if(cur)cur.el.style.display='none';s.el.style.display='block';cur=s;}
+ try{s.inst.render(t-s.start,s.k);}catch(e){console.error(e);}
+ fill.style.width=(t/total*100)+'%';const f=x=>Math.floor(x/60)+':'+String(Math.floor(x%60)).padStart(2,'0');tm.textContent=f(t)+' / '+f(total);btn.textContent=playing?'❚❚':'▶';}
+function loop(now){const dt=(now-last)/1000;last=now;if(playing){t+=dt;if(t>=total){t=total-0.001;playing=false;}}draw();requestAnimationFrame(loop);}
+function fit(){const w=innerWidth,h=innerHeight-56,sc=Math.min(w/1920,h/1080);stageEl.style.transform='scale('+sc+')';stageEl.style.left=((w-1920*sc)/2)+'px';stageEl.style.top=((h-1080*sc)/2)+'px';}
+addEventListener('resize',fit);fit();
+btn.onclick=()=>{if(t>=total-0.01)t=0;playing=!playing;};
+addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();btn.onclick();}if(e.key==='ArrowRight')t=Math.min(total-0.001,t+5);if(e.key==='ArrowLeft')t=Math.max(0,t-5);});
+bar.onclick=e=>{const r=bar.getBoundingClientRect();t=Math.max(0,Math.min(total-0.001,(e.clientX-r.left)/r.width*total));};
+requestAnimationFrame(loop);
+})();
+</script>
+</body></html>
